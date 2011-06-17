@@ -46,7 +46,7 @@
  */
 
 return array(
-    'installed' => TRUE,
+    'installed' => true,
     'allowed_sizes' => array(
         '100x100',
         '200x200',
@@ -66,7 +66,7 @@ return array(
             'class' => 'CropResized',
         ),
     ),
-    'uploads_path' => './uploads',
-    'cache_path' => './cache',
+    'uploads_path' => 'pictures',
+    'cache_path' => 'cache',
 );
 

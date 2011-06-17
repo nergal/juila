@@ -46,23 +46,45 @@
  */
 
 /**
- * Interface for resizer
+ * Abstract class for resizer
  *
  * @category Resizer
- * @package  Juila/Interface
+ * @package  Juila/Abstract
  * @author   Artem Poluhovich <nergalic@ya.ru>
  * @license  http://www.opensource.org/licenses/bsd-license.php  BSD License
  * @version  Release: 0.0.1a
  * @link     https://github.com/Nergal/julia/
  */
-interface Juila_Interface
+abstract class Juila_Abstract
 {
+    /**
+     * Call lazy initialization
+     *
+     * @return self
+     */
+    public function __construct()
+    {
+        $this->init();
+    }
+
+    /**
+     * Empty method for class initialization
+     *
+     * @abstract
+     * @return void
+     */
+    protected function init()
+    {
+    }
+
     /**
      * Proceed an image
      *
-     * @param string $filename File name to proceed
+     * @param string  $filename File name to proceed
+     * @param integer $width    Width of a new image
+     * @param integer $height   Height of a new image
      *
      * @return mixed
      */
-    public function proceed($filename);
+    abstract public function proceed($filename, $width, $height);
 }

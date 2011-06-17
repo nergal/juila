@@ -64,3 +64,5 @@ if ( ! $config['installed']) {
 
 require_once APPLICATION_PATH."julia/class.julia.php";
 $julia = new Juila($config);
+
+$julia->setRequest($_SERVER['REQUEST_URI']);

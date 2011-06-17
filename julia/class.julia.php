@@ -46,7 +46,7 @@
  */
 
 require_once APPLICATION_PATH."julia/exception.julia.php";
-require_once APPLICATION_PATH."julia/interface.julia.php";
+require_once APPLICATION_PATH."julia/abstract.julia.php";
 
 /**
  * Resizer class
@@ -73,6 +73,12 @@ final class Juila
     protected $loaded_resizers = array();
 
     /**
+     * Available sizes
+     * @var array
+     */
+    protected $loaded_sizes = array();
+
+    /**
      * Setup all needed settings
      *
      * @param array $config Configuration array
@@ -82,14 +88,16 @@ final class Juila
     public function __construct(Array $config)
     {
         $this->config = (object) $config;
+
         $this->setupResizers();
+        $this->setupSizes();
     }
 
     /**
      * Load available resizers
      *
+     * @uses   self::$loaded_resizers
      * @throws Juila_Exception
-     *
      * @return void
      */
     protected function setupResizers()
@@ -116,5 +124,150 @@ final class Juila
                 }
             }
         }
+    }
+
+    /**
+     * Load available sizes
+     *
+     * @uses   self::$loaded_sizes
+     *
+     * @return void
+     */
+    public function setupSizes()
+    {
+        $expr = '#^(?P<x>[0-9]+)x(?P<y>[0-9]+)$#i';
+        foreach ($this->config->allowed_sizes as $size) {
+            if (is_array($size)) {
+                $size = implode('x', $size);
+            }
+
+            if (preg_match($expr, $size)) {
+                $this->loaded_sizes[] = $size;
+            }
+        }
+
+        $this->loaded_sizes = array_unique($this->loaded_sizes, SORT_NUMERIC);
+    }
+
+    /**
+     * Parse picture request
+     *
+     * @param string $uri Requested URI
+     *
+     * @return void
+     */
+    public function setRequest($uri)
+    {
+        $path = explode('/', $uri);
+        $path = array_filter($path);
+
+        try {
+            if (count($path) < 3) {
+                throw new Juila_Exception('No work for juila');
+            }
+
+            $cache_path = array_shift($path);
+            $image_name = array_pop($path);
+            $settings   = array_pop($path);
+
+            $real_cache_path = explode('/', $this->config->cache_path);
+            $real_cache_path = end($real_cache_path);
+
+            if ($real_cache_path == $cache_path) {
+                list($type, $x, $y) = $this->validateSettings($settings);
+
+                if ($real_path = $this->checkImage($path, $image_name)) {
+                    $resizer = $this->loaded_resizers[$type];
+                    $image = $resizer->proceed($real_path, $x, $y);
+
+                    $this->renderResponse($image);
+                } else {
+                    throw new Juila_Exception('Source image not found');
+                }
+            } else {
+                throw new Juila_Exception('Wrong cache path');
+            }
+        } catch (Juila_Exception $e) {
+            $this->return404($e->getMessage());
+        }
+    }
+
+    /**
+     * Return resized image
+     *
+     * @param array $data Response data
+     *
+     * @return void
+     */
+    public function renderResponse($data)
+    {
+        if ( ! empty($data)) {
+            list($content, $type) = $data;
+
+            header('Content-type: '.$type);
+            echo $content;
+        }
+    }
+
+    /**
+     * Check if image exists
+     *
+     * @param array  $path Sliced image path
+     * @param string $name Real image name
+     *
+     * @return string
+     */
+    protected function checkImage(Array $path, $name)
+    {
+        array_push($path, $name);
+        array_unshift($path, $this->config->uploads_path);
+
+        $path = implode(DIRECTORY_SEPARATOR, $path);
+        $path = APPLICATION_PATH.$path;
+        $path = str_replace('//', '/', $path);
+
+        $path = realpath($path);
+
+        return $path;
+    }
+
+    /**
+     * Validate resize settings
+     *
+     * @param string $settings Settings url part
+     *
+     * @throws Julia_Exception
+     * @return array
+     */
+    protected function validateSettings($settings)
+    {
+        $expr = '#^(?P<type>[a-z0-9]+?)_(?P<x>[0-9]+?)x(?P<y>[0-9]+?)$#ui';
+        if (preg_match($expr, $settings, $match)) {
+            if ( ! in_array($match['type'], array_keys($this->loaded_resizers))) {
+                throw new Juila_Exception('Unknow resizer');
+            }
+
+            $size = $match['x'].'x'.$match['y'];
+            if ( ! in_array($size, $this->loaded_sizes)) {
+                throw new Juila_Exception('Unknow size');
+            }
+
+            return array($match['type'], $match['x'], $match['y']);
+        }
+
+        throw new Juila_Exception('Wrong settings');
+    }
+
+    /**
+     * Render 404 error
+     *
+     * @param string $message Exception message
+     *
+     * @return void
+     */
+    public function return404($message = null)
+    {
+        echo "<h1>Not found, {$message}</h1>";
+        die();
     }
 }
