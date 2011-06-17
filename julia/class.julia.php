@@ -94,6 +94,79 @@ final class Juila
     }
 
     /**
+     * Parse picture request
+     *
+     * @param string $uri Requested URI
+     *
+     * @return void
+     */
+    public function setRequest($uri)
+    {
+        $path = explode('/', $uri);
+        $path = array_filter($path);
+
+        try {
+            if (count($path) < 3) {
+                throw new Juila_Exception('No work for juila');
+            }
+
+            $cache_path = array_shift($path);
+            $image_name = array_pop($path);
+            $settings   = array_pop($path);
+
+            $real_cache_path = explode('/', $this->config->cache_path);
+            $real_cache_path = end($real_cache_path);
+
+            if ($real_cache_path == $cache_path) {
+                list($type, $width, $height) = $this->validateSettings($settings);
+
+                if ($real_path = $this->checkImage($path, $image_name)) {
+                    $image_path = $this->_clearPath(APPLICATION_PATH.$uri, false);
+
+                    if ($this->config->cache AND file_exists($image_path)) {
+                        $data = file_get_contents($image_path);
+                        // TODO: correct define mime-type
+                        $mime = 'image/png';
+                        $image = array($data, $mime);
+                    } else {
+                        $resizer = $this->loaded_resizers[$type];
+                        $image = $resizer->proceed($real_path, $width, $height);
+                    }
+
+                    if ($this->config->cache) {
+                        $this->cacheImage($image, $image_path);
+                    }
+                    $this->renderResponse($image);
+                } else {
+                    throw new Juila_Exception('Source image not found');
+                }
+            } else {
+                throw new Juila_Exception('Wrong cache path');
+            }
+        } catch (Juila_Exception $e) {
+            $this->return404($e->getMessage());
+        }
+    }
+
+    /**
+     * Return resized image
+     *
+     * @param array $data Response data
+     *
+     * @return void
+     */
+    public function renderResponse($data)
+    {
+        if ( ! empty($data)) {
+            list($content, $type) = $data;
+
+            header('Content-type: '.$type);
+            echo $content;
+        }
+    }
+
+
+    /**
      * Load available resizers
      *
      * @uses   self::$loaded_resizers
@@ -133,7 +206,7 @@ final class Juila
      *
      * @return void
      */
-    public function setupSizes()
+    protected function setupSizes()
     {
         $expr = '#^(?P<x>[0-9]+)x(?P<y>[0-9]+)$#i';
         foreach ($this->config->allowed_sizes as $size) {
@@ -150,63 +223,36 @@ final class Juila
     }
 
     /**
-     * Parse picture request
+     * Render 404 error
      *
-     * @param string $uri Requested URI
+     * @param string $message Exception message
      *
      * @return void
      */
-    public function setRequest($uri)
+    protected function return404($message = null)
     {
-        $path = explode('/', $uri);
-        $path = array_filter($path);
-
-        try {
-            if (count($path) < 3) {
-                throw new Juila_Exception('No work for juila');
-            }
-
-            $cache_path = array_shift($path);
-            $image_name = array_pop($path);
-            $settings   = array_pop($path);
-
-            $real_cache_path = explode('/', $this->config->cache_path);
-            $real_cache_path = end($real_cache_path);
-
-            if ($real_cache_path == $cache_path) {
-                list($type, $x, $y) = $this->validateSettings($settings);
-
-                if ($real_path = $this->checkImage($path, $image_name)) {
-                    $resizer = $this->loaded_resizers[$type];
-                    $image = $resizer->proceed($real_path, $x, $y);
-
-                    $this->renderResponse($image);
-                } else {
-                    throw new Juila_Exception('Source image not found');
-                }
-            } else {
-                throw new Juila_Exception('Wrong cache path');
-            }
-        } catch (Juila_Exception $e) {
-            $this->return404($e->getMessage());
-        }
+        echo "<h1>Not found, {$message}</h1>";
+        die();
     }
 
     /**
-     * Return resized image
+     * Cache image to filesystem
      *
-     * @param array $data Response data
+     * @param array  $image Image array
+     * @param string $path  Image cache path
      *
      * @return void
      */
-    public function renderResponse($data)
+    protected function cacheImage($image, $path)
     {
-        if ( ! empty($data)) {
-            list($content, $type) = $data;
+        $cache_dir = dirname($path);
 
-            header('Content-type: '.$type);
-            echo $content;
+        var_dump($cache_dir);
+        if ( ! mkdir($cache_dir, $this->config->folder_mode, true)) {
+            throw new Juila_Exception('Unable to create cache directory');
         }
+
+        return file_put_contents($path, $image[0]);
     }
 
     /**
@@ -221,12 +267,9 @@ final class Juila
     {
         array_push($path, $name);
         array_unshift($path, $this->config->uploads_path);
+        array_unshift($path, APPLICATION_PATH);
 
-        $path = implode(DIRECTORY_SEPARATOR, $path);
-        $path = APPLICATION_PATH.$path;
-        $path = str_replace('//', '/', $path);
-
-        $path = realpath($path);
+        $path = $this->_clearPath($path);
 
         return $path;
     }
@@ -258,16 +301,27 @@ final class Juila
         throw new Juila_Exception('Wrong settings');
     }
 
+
     /**
-     * Render 404 error
+     * Clear image path
      *
-     * @param string $message Exception message
+     * @param string|array $path    Image path
+     * @param boolean      $do_real Do realpath over path
      *
-     * @return void
+     * @return string|boolean
      */
-    public function return404($message = null)
+    private function _clearPath($path, $do_real = true)
     {
-        echo "<h1>Not found, {$message}</h1>";
-        die();
+        if (is_array($path)) {
+            $path = implode(DIRECTORY_SEPARATOR, $path);
+        }
+
+        $path = str_replace('//', '/', $path);
+
+        if ($do_real) {
+            $path = realpath($path);
+        }
+
+        return $path;
     }
 }

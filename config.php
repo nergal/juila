@@ -46,27 +46,30 @@
  */
 
 return array(
-    'installed' => true,
+    'installed'     => true,
+    'cache'         => false,
     'allowed_sizes' => array(
         '100x100',
         '200x200',
         array(200, 150),
     ),
-    'resize_type' => array(
-        'res'   => array(
-            'file' => './types/res.php',
+    'resize_type'   => array(
+        'res'    => array(
+            'file'  => './types/res.php',
             'class' => 'Resizer',
         ),
         'crop'   => array(
-            'file' => './types/crop.php',
+            'file'  => './types/crop.php',
             'class' => 'Crop',
         ),
-        'cropr'   => array(
-            'file' => './types/cropr.php',
+        'cropr'  => array(
+            'file'  => './types/cropr.php',
             'class' => 'CropResized',
         ),
     ),
-    'uploads_path' => 'pictures',
-    'cache_path' => 'cache',
+    'uploads_path'  => 'pictures',
+    'cache_path'    => 'cache',
+    'folder_mode'   => 0755,
+    'file_mode'     => 0644,
 );
 

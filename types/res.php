@@ -75,12 +75,12 @@ class Juila_Types_Resizer extends Juila_Abstract
      * Resize an image
      *
      * @param string  $filename Image filename
-     * @param integer $x        Image width
-     * @param integer $y        Image height
+     * @param integer $width    Image width
+     * @param integer $height   Image height
      *
      * @return mixed
      */
-    public function proceed($filename, $x, $y)
+    public function proceed($filename, $width, $height)
     {
         $image = $this->_openImage($filename);
 
@@ -88,16 +88,16 @@ class Juila_Types_Resizer extends Juila_Abstract
             throw new Juila_Exception('Unable to create image');
         }
 
-        list($image, $width, $height) = $image;
-        $thumb = imageCreateTruecolor($x, $y);
+        list($image, $src_width, $src_height) = $image;
+        $thumb = imageCreateTruecolor($width, $height);
 
         $resize = imageCopyResampled(
             $thumb,
             $image,
             0, 0,
             0, 0,
-            $x, $y,
-            $width, $height
+            $width, $height,
+            $src_width, $src_height
         );
         if ( ! $resize) {
             throw new Juila_Exception('Unable to resize image');
