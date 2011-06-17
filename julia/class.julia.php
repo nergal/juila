@@ -45,22 +45,76 @@
  * @link      https://github.com/Nergal/julia/
  */
 
-define('APPLICATION_PATH', realpath(dirname(__FILE__)).DIRECTORY_SEPARATOR);
-
 require_once APPLICATION_PATH."julia/exception.julia.php";
+require_once APPLICATION_PATH."julia/interface.julia.php";
 
-$config_path = realpath(APPLICATION_PATH.'config.php');
-if ($config_path) {
-    $config = include_once $config_path;
-} else {
-    throw new Juila_Exception('Config file not found');
+/**
+ * Resizer class
+ *
+ * @category Resizer
+ * @package  Juila
+ * @author   Artem Poluhovich <nergalic@ya.ru>
+ * @license  http://www.opensource.org/licenses/bsd-license.php  BSD License
+ * @version  Release: 0.0.1a
+ * @link     https://github.com/Nergal/julia/
+ */
+final class Juila
+{
+    /**
+     * Configuration
+     * @var array $config
+     */
+    protected $config = array();
+
+    /**
+     * Available resizers
+     * @var array
+     */
+    protected $loaded_resizers = array();
+
+    /**
+     * Setup all needed settings
+     *
+     * @param array $config Configuration array
+     *
+     * @return self
+     */
+    public function __construct(Array $config)
+    {
+        $this->config = (object) $config;
+        $this->setupResizers();
+    }
+
+    /**
+     * Load available resizers
+     *
+     * @throws Juila_Exception
+     *
+     * @return void
+     */
+    protected function setupResizers()
+    {
+        foreach ($this->config->resize_type as $name => $data) {
+            $filename = $data['file'];
+            $classname = 'Juila_Types_'.$data['class'];
+
+            if ( ! in_array($filename[0], array('.', DIRECTORY_SEPARATOR))) {
+                $filename = APPLICATION_PATH.$filename;
+            }
+
+            $filename = realpath($filename);
+            if ($filename) {
+                include_once $filename;
+
+                if (class_exists($classname)) {
+                    $object = new $classname;
+
+                    $this->loaded_resizers[$name] = $object;
+                    unset($object);
+                } else {
+                    throw new Juila_Exception('Wrong resized definition');
+                }
+            }
+        }
+    }
 }
-
-if ( ! $config['installed']) {
-    $install_script = dirname($_SERVER['REQUEST_URI']).'install.php';
-    header('Location: '.$install_script);
-    die();
-}
-
-require_once APPLICATION_PATH."julia/class.julia.php";
-$julia = new Juila($config);

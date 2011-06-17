@@ -46,7 +46,7 @@
  */
 
 return array(
-    'installed' => true,
+    'installed' => TRUE,
     'allowed_sizes' => array(
         '100x100',
         '200x200',

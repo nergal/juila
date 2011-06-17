@@ -45,22 +45,16 @@
  * @link      https://github.com/Nergal/julia/
  */
 
-define('APPLICATION_PATH', realpath(dirname(__FILE__)).DIRECTORY_SEPARATOR);
-
-require_once APPLICATION_PATH."julia/exception.julia.php";
-
-$config_path = realpath(APPLICATION_PATH.'config.php');
-if ($config_path) {
-    $config = include_once $config_path;
-} else {
-    throw new Juila_Exception('Config file not found');
+/**
+ * Overloaded exception
+ *
+ * @category Resizer
+ * @package  Juila/Exception
+ * @author   Artem Poluhovich <nergalic@ya.ru>
+ * @license  http://www.opensource.org/licenses/bsd-license.php  BSD License
+ * @version  Release: 0.0.1a
+ * @link     https://github.com/Nergal/julia/
+ */
+class Juila_Exception extends Exception
+{
 }
-
-if ( ! $config['installed']) {
-    $install_script = dirname($_SERVER['REQUEST_URI']).'install.php';
-    header('Location: '.$install_script);
-    die();
-}
-
-require_once APPLICATION_PATH."julia/class.julia.php";
-$julia = new Juila($config);
