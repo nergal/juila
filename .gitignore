@@ -1,0 +1,5 @@
+cache/*
+pictures/*
+.settings/
+.project
+.buildpath
